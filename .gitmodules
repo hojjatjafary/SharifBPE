@@ -1,0 +1,3 @@
+[submodule "ThirdParty/pcre2"]
+	path = ThirdParty/pcre2
+	url = git@github.com:PCRE2Project/pcre2.git
