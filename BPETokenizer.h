@@ -24,7 +24,7 @@ public:
 
 	void EncodeFile(const std::string& inputFileName, const std::string& outputFileName);
 
-	void Encode(const std::vector<std::string_view>& inputWords, std::vector<std::list<uint32_t>>& outResult);
+	void Encode(const std::vector<std::string_view>& inputWords, std::vector<std::vector<uint32_t>>& outResult);
 	
 private:
 
@@ -39,21 +39,15 @@ private:
 
 	std::unique_ptr<class MemoryMappedFile> mMappedFile;
 
-	std::list<uint32_t> encodeWord(const std::string_view& word);
+	std::vector<uint32_t> encodeWord(const std::string_view& word);
 
 	void encodeAllWords(
 		const std::vector<std::string_view>& words,
 		const IdPair& fileSection, 
-		std::vector<std::list<uint32_t>>& outResult
+		std::vector<std::vector<uint32_t>>& outResult
 	);
 
-	void encodeWord(std::list<uint32_t>& splitedWord);
-
-	void replacePairInWord(
-		std::list<uint32_t>& splitedWord,
-		const IdPair& pair,
-		const uint32_t tokenId
-	);
+	void encodeWord(std::vector<uint32_t>& splitedWord);
 
 	// --- Read file methods ---
 

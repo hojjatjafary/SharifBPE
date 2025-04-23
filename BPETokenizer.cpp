@@ -81,7 +81,7 @@ void BPETokenizer::EncodeFile(const std::string& inputFileName, const std::strin
     std::vector<std::string_view> words;
     readFile(inputFileName, words);
     
-    std::vector<std::list<uint32_t>> result;
+    std::vector<std::vector<uint32_t>> result;
     Encode(words, result);
 
     std::ofstream outFile(outputFileName);
@@ -96,13 +96,13 @@ void BPETokenizer::EncodeFile(const std::string& inputFileName, const std::strin
 
 //-------------------------------------------------------------------------------------------------
 // Encode list of word in multi-threaded manner.
-void BPETokenizer::Encode(const std::vector<std::string_view>& inputWords, std::vector<std::list<uint32_t>>& outResult)
+void BPETokenizer::Encode(const std::vector<std::string_view>& inputWords, std::vector<std::vector<uint32_t>>& outResult)
 {
     uint8_t ThreadCount = EncodeThreadCount;
     const uint32_t inputSize = inputWords.size();
     const uint32_t SectionLength = inputSize / ThreadCount;
 
-    outResult = std::vector<std::list<uint32_t>>(inputSize);
+    outResult = std::vector<std::vector<uint32_t>>(inputSize);
     auto inputSections = std::vector<IdPair>(ThreadCount);
 
     inputSections[0].first = 0;
@@ -148,7 +148,7 @@ void BPETokenizer::Encode(const std::vector<std::string_view>& inputWords, std::
 
 //-------------------------------------------------------------------------------------------------
 // Encode list of words to list of encoded result.
-void BPETokenizer::encodeAllWords(const std::vector<std::string_view>& words, const IdPair& inputSection, std::vector<std::list<uint32_t>>& outResult)
+void BPETokenizer::encodeAllWords(const std::vector<std::string_view>& words, const IdPair& inputSection, std::vector<std::vector<uint32_t>>& outResult)
 {
     for (int i = inputSection.first; i < inputSection.second; ++i)
     {
@@ -158,7 +158,7 @@ void BPETokenizer::encodeAllWords(const std::vector<std::string_view>& words, co
 
 //-------------------------------------------------------------------------------------------------
 // First convert string to a list of integer and then encode it.
-std::list<uint32_t> BPETokenizer::encodeWord(const std::string_view& word)
+std::vector<uint32_t> BPETokenizer::encodeWord(const std::string_view& word)
 {
     auto vocabIter = mVocabulary.find(word);
     if (vocabIter != mVocabulary.end())
@@ -166,7 +166,7 @@ std::list<uint32_t> BPETokenizer::encodeWord(const std::string_view& word)
         return { vocabIter->second };
     }
 
-    std::list<uint32_t> splitedWord;
+    std::vector<uint32_t> splitedWord;
     for (const auto& ch : word)
     {
         // We should cast to unsigned char first then uint
@@ -181,28 +181,21 @@ std::list<uint32_t> BPETokenizer::encodeWord(const std::string_view& word)
 //-------------------------------------------------------------------------------------------------
 // Real encode algorithm for each word converted to a list of ids.
 // I can use a minHeap and do same as learn algorithm but seems it is overkill and has no gain.
-void BPETokenizer::encodeWord(std::list<uint32_t>& splitedWord)
+void BPETokenizer::encodeWord(std::vector<uint32_t>& splitedWord)
 {
     static const auto mergeRulesEnd = mMergeRules.end();
 
     while (splitedWord.size() > 1)
     {
-        auto iter = splitedWord.begin();
-        IdPair curPair;
-        curPair.second = *iter;
-
         // Min rank is the most frequent pair in the training phase.
         // rank is token id or the order by frequency of pairs in training phase.
         bool minPairFound = false;
         IdPair minRankPair;
         uint32_t minRank = std::numeric_limits< uint32_t>::max();
-        for (++iter ; iter != splitedWord.end(); ++iter)
+        for (size_t i = 0; i < splitedWord.size() - 1; ++i)
         {
-            uint32_t token = *iter;
-            curPair.first = curPair.second;
-            curPair.second = token;
-
-            auto mergeIter = mMergeRules.find(curPair);
+            const IdPair currentPair(splitedWord[i], splitedWord[i + 1]);
+            auto mergeIter = mMergeRules.find(currentPair);
             if (mergeIter != mergeRulesEnd)
             {
                 minPairFound = true;
@@ -210,47 +203,39 @@ void BPETokenizer::encodeWord(std::list<uint32_t>& splitedWord)
                 if (rank < minRank)
                 {
                     minRank = rank;
-                    minRankPair = curPair;
+                    minRankPair = currentPair;
+                    // Early exit if the minimal possible rank is found
+                    if (minRank == 0)
+                    {
+                        break;
+                    }
                 }
             }
         }
 
+        // If no mergeable pairs found, exit
         if (!minPairFound)
         {
             break;
         }
 
-        replacePairInWord(splitedWord, minRankPair, minRank);
-    }
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void BPETokenizer::replacePairInWord(std::list<uint32_t>& splitedWord, const IdPair& pair, const uint32_t tokenId)
-{
-    auto prevIter = splitedWord.begin();
-    auto currentIter = std::next(prevIter);
-
-    while (currentIter != splitedWord.end())
-    {
-        if (*prevIter == pair.first && *currentIter == pair.second)
+        // Step 2: Replace all occurrences of minPair with its token ID in-place
+        size_t write = 0, read = 0;
+        while (read < splitedWord.size())
         {
-            // Replace the pair with the new id
-            *prevIter = tokenId;
-            currentIter = splitedWord.erase(currentIter);
-
-            // Update prevIter to the current position after erase
-            prevIter = currentIter;
-            if (currentIter != splitedWord.end())
+            if (read < splitedWord.size() - 1 &&
+                splitedWord[read] == minRankPair.first &&
+                splitedWord[read + 1] == minRankPair.second)
             {
-                ++currentIter;
+                splitedWord[write++] = minRank;
+                read += 2;
+            }
+            else
+            {
+                splitedWord[write++] = splitedWord[read++];
             }
         }
-        else
-        {
-            prevIter = currentIter;
-            ++currentIter;
-        }
+        splitedWord.resize(write);
     }
 }
 
