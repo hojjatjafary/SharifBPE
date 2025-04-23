@@ -5,7 +5,6 @@
 
 #include <string>
 #include <vector>
-#include <list>
 #include <unordered_set>
 #include <unordered_map>
 
@@ -28,7 +27,7 @@ private:
 	using IdPair = std::pair<uint32_t, uint32_t>;
 	using MapType = std::unordered_map<std::string_view, uint32_t>;
 
-	std::vector<std::list<uint32_t>> mSplitedWords;
+	std::vector<std::vector<uint32_t>> mSplitedWords;
 	std::vector<int32_t> mWordCounts;
 
 	std::unordered_map<uint32_t, std::string> mIdToPair; // Vocabulary, Used for debugging
@@ -49,12 +48,13 @@ private:
 
 	void countPairsInWord(
 		const uint32_t wordIndex, 
-		const std::list<uint32_t>& splitedWord,
+		const std::vector<uint32_t>& splitedWord,
 		const uint32_t count
 	);
 
+
 	void replacePairInWord(
-		std::list<uint32_t>& splitedWord,
+		std::vector<uint32_t>& splitedWord,
 		const uint32_t wordCount,
 		const IdPair& maxPair,
 		const uint32_t newTokenId,

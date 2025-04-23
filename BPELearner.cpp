@@ -80,12 +80,11 @@ void BPELearner::prepare(const MapType& wordCount)
 	{
 		const auto& word = item.first;
 
-		mSplitedWords.emplace_back();
-		auto& currentSplitedWord = mSplitedWords.back();
-		for (const auto& ch : word)
+		auto& currentSplitedWord = mSplitedWords.emplace_back(word.size(), 0);
+		for (size_t i = 0; i < word.size(); ++i)
 		{
 			// We should cast to uchar first and then to uint
-			currentSplitedWord.push_back(static_cast<uint8_t>(ch));
+			currentSplitedWord[i] = static_cast<uint8_t>(word[i]);
 		}
 
 		mWordCounts.push_back(item.second);
@@ -104,19 +103,17 @@ void BPELearner::prepare(const MapType& wordCount)
 
 void BPELearner::countPairsInWord(
 	const uint32_t wordIndex,
-	const std::list<uint32_t>& splitedWord,
+	const std::vector<uint32_t>& splitedWord,
 	const uint32_t countOfWord
 )
 {
-	auto iter = splitedWord.begin();
 	IdPair curPair;
-	curPair.second = *iter;
+	curPair.second = splitedWord[0];
 
-	for (iter = std::next(iter); iter != splitedWord.end(); ++iter)
+	for (size_t i = 1; i < splitedWord.size(); ++i)
 	{
-		const uint32_t tokenId = *iter;
 		curPair.first = curPair.second;
-		curPair.second = tokenId;
+		curPair.second = splitedWord[i];
 
 		mMaxHeap.UpSert(curPair, countOfWord);
 
@@ -166,57 +163,45 @@ void BPELearner::internalLearn(const uint32_t vocabSize)
 //-------------------------------------------------------------------------------------------------
 
 void BPELearner::replacePairInWord(
-	std::list<uint32_t>& splitedWord,
+	std::vector<uint32_t>& splitedWord,
 	const uint32_t wordCount,
 	const IdPair& maxPair,
 	const uint32_t newTokenId,
 	const uint32_t wordIndex
 )
 {
-	auto iter = splitedWord.begin();
-	IdPair curPair;
-	curPair.second = *iter;
-	iter = std::next(iter);
+	const auto wordLength = splitedWord.size();
 
-	while (iter != splitedWord.end())
+	size_t write = 0, read = 0;
+	while (read < wordLength)
 	{
-		curPair.first = curPair.second;
-		curPair.second = *iter;
-
-		// maxPair is present in this word
-		if (curPair == maxPair)
+		if (read < wordLength - 1 &&
+			splitedWord[read] == maxPair.first &&
+			splitedWord[read + 1] == maxPair.second)
 		{
-			iter--; // points to first element of pair
-
-			// if there is a token before us
-			if (iter != splitedWord.begin())
+			// Update previous pair (if it exists)
+			if (write > 0) 
 			{
-				iter--;
-				updateCount(IdPair(*iter, curPair.first), -wordCount, wordIndex);
-				updateCount(IdPair(*iter, newTokenId), wordCount, wordIndex);
-				iter++;
+				updateCount(IdPair(splitedWord[write - 1], maxPair.first), -wordCount, wordIndex);
+				updateCount(IdPair(splitedWord[write - 1], newTokenId), wordCount, wordIndex);
 			}
 
-			// Insert the new token before the first element of the pair
-            splitedWord.insert(iter, newTokenId);
-
-            // Erase the original pair (next two elements after the inserted token)
-            iter = splitedWord.erase(iter, std::next(iter, 2));
-
-			// if there is a token after the one we inserted
-			if (iter != splitedWord.end())
+			// Update next pair (if it exists)
+			if (read + 2 < wordLength)
 			{
-				updateCount(IdPair(curPair.second, *iter), -wordCount, wordIndex);
-				updateCount(IdPair(newTokenId, *iter), wordCount, wordIndex);
+				updateCount(IdPair(maxPair.second, splitedWord[read + 2]), -wordCount, wordIndex);
+				updateCount(IdPair(newTokenId, splitedWord[read + 2]), wordCount, wordIndex);
 			}
 
-			curPair.second = newTokenId;
+			splitedWord[write++] = newTokenId; // Replace the pair
+			read += 2;
 		}
-		else
+		else 
 		{
-			iter++;
+			splitedWord[write++] = splitedWord[read++];
 		}
 	}
+	splitedWord.resize(write);
 }
 
 //-------------------------------------------------------------------------------------------------
