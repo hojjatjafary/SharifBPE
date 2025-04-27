@@ -25,11 +25,13 @@ BPELearner::BPELearner()
 
 void BPELearner::Learn(const uint32_t vocabSize, const char* inputFileName)
 {
-	MapType wordCountHashTable;
-	MultiThreadFileReader MTFRead;
-	MTFRead.ReadText(inputFileName, wordCountHashTable);
+	{
+		MapType wordCountHashTable;
+		MultiThreadFileReader MTFRead;
+		MTFRead.ReadText(inputFileName, wordCountHashTable);
 
-	prepare(wordCountHashTable);
+		prepare(wordCountHashTable);
+	} // Unload mapped file and wordCountHashTable
 
 	internalLearn(vocabSize);
 }
@@ -38,10 +40,12 @@ void BPELearner::Learn(const uint32_t vocabSize, const char* inputFileName)
 
 void BPELearner::Learn(const uint32_t vocabSize, const std::vector<std::string>& textChunks)
 {
-	MapType wordCountHashTable;
-	countWords(textChunks, wordCountHashTable);
+	{
+		MapType wordCountHashTable;
+		countWords(textChunks, wordCountHashTable);
 
-	prepare(wordCountHashTable);
+		prepare(wordCountHashTable);
+	}
 
 	internalLearn(vocabSize);
 }
