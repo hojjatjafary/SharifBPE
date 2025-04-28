@@ -117,11 +117,8 @@ void BPETokenizer::Encode(const std::vector<std::string_view>& inputWords, std::
         inputSections[i].second = sectionEnd;
     }
     
-    // Clamp last input
-    if (inputSections[ThreadCount - 1].second > inputSize)
-    {
-        inputSections[ThreadCount - 1].second = inputSize;
-    }
+    // Ensure the last section covers all remaining elements
+    inputSections[ThreadCount - 1].second = inputSize;
 
     std::vector<std::thread> workers;
     workers.reserve(ThreadCount);

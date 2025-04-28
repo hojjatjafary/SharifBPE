@@ -35,8 +35,10 @@ get_target_property(PCRE2_INCLUDES pcre2-8 INTERFACE_INCLUDE_DIRECTORIES)
 # --- End PCRE2 Configuration ---
 # -------------------------------------------------------------------------------------------------
 # Lib
-add_library(SharifBPELib 
-        "MMFile.h"
+set (SharifBPELib_Files
+		"SharifBPE_API.h"
+		"SharifBPE_API.cpp"
+		"MMFile.h"
         "MaxHeap.h"
         "PairHasher.h"
         "MultiThreadFileReader.h"
@@ -47,11 +49,27 @@ add_library(SharifBPELib
         "BPETokenizer.cpp"
 )
 
+add_library(SharifBPELib ${SharifBPELib_Files})   
+
 target_link_libraries(SharifBPELib PRIVATE pcre2-8)
 
 if (PCRE2_BUILD_STATIC)
     target_compile_definitions(SharifBPELib PRIVATE PCRE2_STATIC)
 endif()
+
+target_include_directories(SharifBPELib PUBLIC "ThirdParty" ${PCRE2_INCLUDES})
+
+# -------------------------------------------------------------------------------------------------
+# Shared Lib
+
+add_library (SharifBPELib_shared SHARED
+	${SharifBPELib_Files}
+)
+
+target_link_libraries(SharifBPELib_shared PRIVATE pcre2-8)
+
+target_compile_definitions (SharifBPELib_shared PRIVATE SHARIF_BPE_SHARED)
+target_compile_definitions (SharifBPELib_shared PRIVATE SHARIF_BPE_BUILDING_DLL)
 
 target_include_directories(SharifBPELib PUBLIC "ThirdParty" ${PCRE2_INCLUDES})
 
@@ -69,9 +87,10 @@ target_link_libraries(SharifBPE PRIVATE SharifBPELib)
 add_executable(UnitTests
         "Tests/TestMain.cpp"
         "Tests/TestMaxHeap.cpp"
+		"Tests/TestBPELearner.cpp"
 )
 
- target_include_directories("UnitTests" PUBLIC 
+target_include_directories(UnitTests PUBLIC 
         "${PROJECT_SOURCE_DIR}"
 )
 
