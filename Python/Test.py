@@ -4,9 +4,6 @@ from typing import Optional, Sequence, Dict
 import tempfile
 import os
 
-import sys
-sys.path.append('..')
-
 from SharifBPE import BPELearner 
 from SharifBPE import BPETokenizer 
 

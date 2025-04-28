@@ -16,7 +16,7 @@ if os.name == "posix":
         raise ImportError('Could not load SharifBPELib_shared at "%s"' % path)
 elif os.name == "nt":
     relative_path = (
-        "\\build\\Release\\SharifBPELib_shared.dll"
+        "\\..\\build\\Release\\SharifBPELib_shared.dll"
     )
     absolute_path = os.path.dirname(__file__) + relative_path
     try:
