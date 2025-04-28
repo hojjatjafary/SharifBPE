@@ -23,11 +23,12 @@ def test_tokenizer():
     bpeTokenizer.ReadModel("vocab.model");
     bpeTokenizer.Encode("This text will be tokenized!")
 
-    tokens = bpeTokenizer.EncodeWords(["This", "is", "a", "list", "of", "words"])
+    wordList = ["This", "is", "a", "list", "of", "words"]
+    tokens = bpeTokenizer.EncodeWords(wordList)
 
     print ("Python Results:")
-    for token in tokens:
-        print (token)
+    for word, token in zip(wordList, tokens):
+        print ("'" + word + "':", token)
 
 if __name__ == "__main__":
     test_init()
