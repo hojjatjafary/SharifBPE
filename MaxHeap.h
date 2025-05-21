@@ -1,5 +1,6 @@
 #include "PairHasher.h"
 
+#include <cstdint>
 #include <vector>
 #include <string>
 #include <unordered_map>

@@ -4,6 +4,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdlib.h>
 
 #if !defined(_SHARIF_BPE_API_HEADER_)
 #define _SHARIF_BPE_API_HEADER_
